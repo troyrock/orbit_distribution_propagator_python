@@ -53,7 +53,8 @@ Initial particles form a NumPy float64 array of shape `(N,6)`. Retained history
 has shape `(F,N,8)`: six selected output elements, continuous mean longitude,
 and mean semimajor axis. This costs exactly `64*F*N` bytes. Frame dictionaries
 retain only the first `min(visual_samples,N)` display positions, a 181-point
-reference ellipse, and full-ensemble metrics. All computations use float64;
+reference ellipse, its six selected-output `reference_elements`, and
+full-ensemble metrics. All computations use float64;
 JSON round-trip precision and 17-significant-digit CSV preserve that precision.
 
 Scalar and vectorized conversion solve the elliptic equinoctial Kepler
@@ -195,8 +196,81 @@ for arbitrary empirical ensembles. It is not a mixing-time confidence interval.
 All files are created exclusively in an empty directory. `summary.json` is
 written last as completion marker. Nonfinite JSON is rejected and embedded
 `<` characters escaped to prevent premature script termination. The package
-includes the unchanged C++ viewer resource, with exactly one data insertion
+includes the same viewer resource as the C++ tool, with exactly one data insertion
 token. It makes no network requests and animates saved epochs only.
+
+### Local cross-section geometry
+
+Each frame exports `reference_elements = [a,ex,ey,hx,hy,lambda]` for the same
+instantaneous nominal orbit used by `reference_orbit_m`. Its mean or osculating
+interpretation follows `metadata.output_type`. This additive schema version 1
+field lets the viewer follow plane/perigee precession and evaluate positions
+and tangents analytically instead of differentiating the sampled polyline. If
+these elements are missing or invalid, the new panel is disabled with a
+regeneration message; the original scene, diagnostics, and playback remain
+available. Initial `metadata.nominal_elements` are not substituted for later
+reference geometry.
+
+Let `P,Q` be orthonormal periapsis/transverse vectors in the nominal orbital
+plane, `N=P cross Q`, `e` its eccentricity, and `p=a*(1-e^2)`. At selected true
+anomaly `f`, the reference position, velocity direction, and section axes are:
+
+```text
+r_ref(f) = p/(1+e*cos(f)) * (cos(f)*P + sin(f)*Q)
+v_ref(f) = sqrt(mu/p) * (-sin(f)*P + (e+cos(f))*Q)
+T(f) = unit(v_ref(f))
+X(f) = unit(T(f) cross N)       # horizontal, in-plane normal to travel
+Y    = N                      # vertical, normal to the orbital plane
+```
+
+The two plot axes are perpendicular to travel. `X` differs from radial away
+from the apsides of an eccentric orbit. For `e < 1e-12`, the angle origin uses
+the equinoctial x-axis instead of an undefined periapsis. The 0°–360° slider
+sets `f`; follow mode solves the nominal Kepler equation to locate the nominal
+position at each saved epoch. Changing the angle manually disables following.
+
+For each displayed Cartesian position `r_i`, projection into the current
+reference plane gives its angular location `f_i`. A particle is selected when
+
+```text
+abs(atan2(sin(f_i-f), cos(f_i-f))) <= full_slice_width/2
+```
+
+with a small roundoff allowance at the boundary. The full width ranges from
+1° to 40° and defaults to 10°. This wrapped angular selection excludes the
+opposite orbital branch and is continuous across 0°/360°. Positions with an
+undefined in-plane angle are not selected.
+
+The default curvature correction subtracts the reference position at each
+particle's projected angle and transports its local transverse components to
+the chosen section:
+
+```text
+delta_i = r_i - r_ref(f_i)
+x_i = dot(delta_i, X(f_i))
+y_i = dot(delta_i, N)
+```
+
+Thus particles lying exactly on the reference ellipse have zero corrected
+width. With correction off, the raw projection instead uses
+`delta_i = r_i-r_ref(f)`, `x_i=dot(delta_i,X(f))`, and `y_i=dot(delta_i,N)`.
+A circular reference segment with half-width `h` alone then produces an
+inward offset `a*(1-cos(h))`: about 101 km for a 10° full slice at
+`a=26,560 km`. The mode labels distinguish this geometric broadening from
+distribution thickness. Neither mode propagates, interpolates, or changes
+particle positions; the same saved epoch drives both views.
+
+Cross-section points use only the exported display subset and preserve its
+particle IDs/colors. Counts always state selected versus displayed samples;
+fewer than 20 selected points trigger a sparse-slice message. Equal scales on
+both axes preserve shape, while the automatic extent changes between slices.
+Larger widths include more particles but combine more orbital locations. The
+view is not a density estimate, confidence contour, or full-ensemble statistic.
+Its true-angle matching and axes also differ from `tube_rtn_sigma_m`, which
+uses output mean longitude and RTN axes over the complete ensemble. Existing
+metrics, event detection, and saved-epoch playback semantics are unchanged.
+
+### Extending the implementation
 
 Extension boundaries are explicit: add force configuration/native lifecycle
 support in `backend.py`, coordinate transforms in `orbit.py`, distribution

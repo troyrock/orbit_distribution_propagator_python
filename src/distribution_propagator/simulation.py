@@ -133,6 +133,7 @@ def _analyze_frame(epoch, values, reference, config):
         "semimajor_sigma_m": sample_sigma(values[:, 7]), "coverage": bool(coverage), "mixed": bool(mixed),
     }
     return {"time_s": epoch, "positions_m": cart[:config.visual_samples, :3].tolist(),
+            "reference_elements": ref.tolist(),
             "reference_orbit_m": cartesian_batch(curve, mu)[:, :3].tolist(), "metrics": metrics}
 
 
