@@ -259,7 +259,7 @@ force negligible for every object. Results are conditional on the declared
 force model and initial distribution. These are scientific sensitivity
 considerations, not features silently added to a run.
 
-The native dependency at `D:/orekit/DSST-python` is a Python port of Orekit
+The native [DSST-python dependency](https://github.com/troyrock/DSST-python) is a Python port of Orekit
 13.1.6 DSST, with lightweight orbit, date, frame, body, and force-model adapters.
 Its README states that normal runtime use requires no Java, JPype, or Maven;
 Java Orekit is used separately to generate comparison fixtures. The README

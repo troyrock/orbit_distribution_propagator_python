@@ -4,6 +4,8 @@ Propagate initial Earth-orbit uncertainty using the **native Python Orekit DSST
 port**. This independent implementation preserves the C++ tool's configuration,
 random sample sequence, metrics, output schema, and offline HTML visualization.
 Normal execution requires no C++ executable, compiler, or Java runtime.
+The equivalent [C++ tool](https://github.com/troyrock/orbit_distribution_propagator_cpp)
+is maintained separately.
 
 See [DESCRIPTION.md](DESCRIPTION.md) for algorithms and data structures,
 [SCIENCE.md](docs/SCIENCE.md) for the ball/banana/ribbon critique and sample-size
@@ -11,40 +13,48 @@ reasoning, and [VALIDATION.md](docs/VALIDATION.md) for measured evidence.
 
 ## Setup
 
-Requires Python 3.10+, NumPy 1.24+, and the local native `DSST-python` port.
-There is no compilation step. From this directory:
+Requires Python 3.10+ and Git. NumPy and the native
+[DSST-python](https://github.com/troyrock/DSST-python) port are installed by the
+`dsst` extra below. There is no compilation step. In PowerShell:
 
 ```powershell
+git clone https://github.com/troyrock/orbit_distribution_propagator_python.git
+cd orbit_distribution_propagator_python
 python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install numpy
-$env:DSST_PYTHON_SOURCE = 'D:\orekit\DSST-python\src'
+.\.venv\Scripts\python.exe -m pip install ".[dsst]"
 .\.venv\Scripts\python.exe run.py --help
 ```
 
-Set `DSST_PYTHON_SOURCE` to the **src directory containing dsst**. Alternatively
-install the local port into the same environment using
-`.\.venv\Scripts\python.exe -m pip install D:/orekit/DSST-python`.
-An explicit source setting takes priority; otherwise an installed package is
-used, then the local `D:/orekit/DSST-python/src` fallback. Verified native
-revision: `48001696aea61b4a5629f42ef509c0c8f0d83c87` (Orekit 13.1.6 formulas).
-The upstream checkout is not modified. On Linux/macOS use `python3`, your
-checkout's source path, and `.venv/bin/python`.
+On Linux/macOS:
 
-This workstation also has a ready Python/NumPy runtime:
-
-```powershell
-$python = 'C:\Users\trockwood\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe'
-& $python run.py --help
+```bash
+git clone https://github.com/troyrock/orbit_distribution_propagator_python.git
+cd orbit_distribution_propagator_python
+python3 -m venv .venv
+.venv/bin/python -m pip install ".[dsst]"
+.venv/bin/python run.py --help
 ```
 
-Optional installation with your selected interpreter's `-m pip install .`
-provides the `distribution-propagator` command and
-`python -m distribution_propagator`. NumPy is a declared dependency;
-the native DSST port must still be installed or located as above.
+The extra pins the verified native revision
+`48001696aea61b4a5629f42ef509c0c8f0d83c87` (Orekit 13.1.6 formulas). Initial
+installation needs internet access; simulations and the viewer work offline.
+Installation provides `distribution-propagator` in the environment's executable
+directory and `python -m distribution_propagator` with that interpreter.
+
+If you already have a native DSST checkout, install this tool with
+`python -m pip install .` and either install the dependency with
+`python -m pip install /path/to/DSST-python` or set `DSST_PYTHON_SOURCE` to its
+**src directory containing dsst**. For example, in PowerShell:
+`$env:DSST_PYTHON_SOURCE = (Resolve-Path ../DSST-python/src).Path`.
+An explicit source setting takes priority over an installed package. The
+existing workstation fallback `D:/orekit/DSST-python/src` is retained when
+neither is available, but is not needed for the installation above. Source
+checkouts are not modified during propagation. Alternative revisions need their
+own validation.
 
 ## Run and visualize
 
-Use your selected interpreter (e.g. `.\.venv\Scripts\python.exe` or `& $python`)
+Use your selected interpreter (e.g. `.\.venv\Scripts\python.exe` or `.venv/bin/python`)
 in place of `python` below:
 
 ```powershell
@@ -177,7 +187,7 @@ In PowerShell:
 $env:PYTHONPATH = (Resolve-Path .\src).Path
 python -m unittest discover -s tests -v
 python tools/backend_probe.py outputs/python-reference.csv tests/data/orekit_long_horizon.csv
-python tools/compare_cpp.py --cpp ../distribution_propagator/build/distribution_propagator.exe `
+python tools/compare_cpp.py --cpp ../orbit_distribution_propagator_cpp/build/distribution_propagator.exe `
   --output outputs/cpp-comparison --long
 python tools/verify_package.py
 ```
@@ -189,6 +199,8 @@ Standard tests require neither pytest nor a compiler. The independent Java
 fixture is checked without a JVM. Optional C++ comparison uses an existing
 executable as an oracle. The package check builds/installs offline in a local
 isolated directory; pip, setuptools 68+ and NumPy must already be available.
+Set `--cpp` to the actual built executable; Linux/macOS builds omit `.exe`, and
+multi-configuration generators may place it in `build/Release/`.
 Browser testing needs Node/Playwright and Chromium:
 `node tools/test_viewer.cjs outputs/meo-ball/visualization.html`.
 

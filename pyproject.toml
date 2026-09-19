@@ -6,8 +6,16 @@ build-backend = "setuptools.build_meta"
 name = "distribution-propagator"
 version = "0.1.0"
 description = "Native Python DSST Monte Carlo propagation of orbital uncertainty"
+readme = "README.md"
 requires-python = ">=3.10"
 dependencies = ["numpy>=1.24"]
+
+[project.optional-dependencies]
+dsst = ["dsst-python @ git+https://github.com/troyrock/DSST-python.git@48001696aea61b4a5629f42ef509c0c8f0d83c87"]
+
+[project.urls]
+Repository = "https://github.com/troyrock/orbit_distribution_propagator_python"
+Issues = "https://github.com/troyrock/orbit_distribution_propagator_python/issues"
 
 [project.scripts]
 distribution-propagator = "distribution_propagator.cli:main"
