@@ -182,13 +182,18 @@ def estimated_memory_bytes(c, n):
     The Python tool caps automatic process parallelism at eight workers.
     NumPy retains dense numerical arrays; reserve Python interpreter overhead,
     bounded interprocess result buffers, and Python objects during serialization.
+    Four batch equivalents per worker cover the two submitted jobs plus a
+    worker result and its serialized transport copy during transfer.
     """
     frames = math.ceil(c.duration_days/c.output_step_days)+1
     displayed = min(c.visual_samples, n)
     workers = min(n, c.threads or min(8, os.cpu_count() or 1))
-    return (frames*(n*64+c.phase_bins*8+1024)+n*304
+    # At 200,000 particles, tracemalloc measured ~393 bytes/particle peak
+    # transient storage inside vectorized frame analysis alone. Include the
+    # 48-byte initial state and allow headroom for sorting/conversion temporaries.
+    return (frames*(n*64+c.phase_bins*8+1024)+n*640
             +frames*((displayed+181)*384+c.phase_bins*128+8192)
-            +2*workers*min(16, n)*frames*64
+            +4*workers*min(16, n)*frames*64
             +(workers*64+64)*1024*1024)
 
 

@@ -72,6 +72,19 @@ class ConfigTests(unittest.TestCase):
         self.assertGreater(baseline, estimated_memory_bytes(replace(c, visual_samples=0), 5000))
         self.assertLess(estimated_memory_bytes(Config(), 50000), c.max_memory_mb*1024**2)
 
+    def test_memory_estimate_covers_vectorized_analysis_scratch(self):
+        # Fixed workers, no display, and >16 samples keep process, IPC, and
+        # serialization terms constant. Measured analysis alone peaks near
+        # 393 bytes/particle, besides initial storage and retained frames.
+        c = Config(threads=1, visual_samples=0, duration_days=1, output_step_days=1)
+        extra = estimated_memory_bytes(c, 201000)-estimated_memory_bytes(c, 200000)
+        self.assertGreaterEqual(extra, 1000*(2*64+640))
+
+    def test_memory_estimate_reserves_worker_serialization_copies(self):
+        c = Config(threads=1, visual_samples=0, duration_days=2, output_step_days=1)
+        extra_worker = estimated_memory_bytes(replace(c, threads=2), 1000)-estimated_memory_bytes(c, 1000)
+        self.assertEqual(extra_worker, 64*1024**2+4*16*3*64)
+
 
 if __name__ == '__main__':
     unittest.main()
